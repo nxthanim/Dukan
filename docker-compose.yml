@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Dukan Python Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:8000/webhook}
+      - DATABASE_URL=sqlite:///./dukan.db
+    volumes:
+      - ./dukan.db:/app/dukan.db
+    restart: unless-stopped
+    networks:
+      - dukan-network
+
+  # React Admin Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - REACT_APP_API_URL=http://localhost:8000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - dukan-network
+
+  # Nginx Reverse Proxy (optional for production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - dukan-network
+
+networks:
+  dukan-network:
+    driver: bridge

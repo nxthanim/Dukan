@@ -1,0 +1,31 @@
+# Dukan Frontend Dockerfile
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Copy package files
+COPY react-admin/package.json react-admin/package-lock.json* ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source files
+COPY react-admin/ .
+
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy built files
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copy custom nginx config
+COPY react-admin/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
